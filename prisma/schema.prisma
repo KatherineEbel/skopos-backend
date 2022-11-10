@@ -1,0 +1,93 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+generator typegraphql {
+  provider = "typegraphql-prisma"
+}
+
+model Collection {
+  id            Int                     @id @default(autoincrement())
+  title         String
+  requests      Request[]
+  createdAt     DateTime                @default(now())
+  collectionRuns CollectionRun[]
+  monitorId     Int?
+  monitor       Monitor? @relation(fields: [monitorId], references: [id], onDelete: SetNull)
+}
+
+model CollectionRun {
+  id           Int         @id @default(autoincrement())
+  createdAt    DateTime    @default(now())
+  collection   Collection? @relation(fields: [collectionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  collectionId Int?
+  responses    Response[]
+}
+
+model Request {
+  id           Int         @id @default(autoincrement())
+  title        String
+  createdAt    DateTime    @default(now())
+  url          String
+  method       String
+  headers      Json?
+  body         Json?
+  stepNumber   Int
+  collectionId Int?
+  collection   Collection? @relation(fields: [collectionId], references: [id])
+  assertions   Assertion[]
+}
+
+model Assertion {
+  id              Int               @id @default(autoincrement())
+  property        String
+  comparison      String
+  expected        String
+  requestId       Int?
+  request         Request?          @relation(fields: [requestId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  createdAt       DateTime          @default(now())
+  assertionResults AssertionResult[]
+}
+
+model Response {
+  id              Int               @id @default(autoincrement())
+  status          Int
+  headers         Json
+  body            Json?
+  latency         Int
+  createdAt       DateTime          @default(now())
+  assertionResults AssertionResult[]
+  collectionRun   CollectionRun?    @relation(fields: [collectionRunId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  collectionRunId Int?
+}
+
+model AssertionResult {
+  id          Int        @id @default(autoincrement())
+  createdAt   DateTime   @default(now())
+  response    Response?  @relation(fields: [responseId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  responseId  Int?
+  assertion   Assertion? @relation(fields: [assertionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  assertionId Int?
+  pass        Boolean
+  actual      String
+}
+
+model Monitor {
+  id          Int                     @id @default(autoincrement())
+  schedule    String
+  contactInfo String
+  createdAt   DateTime                @default(now())
+  collections Collection[]
+  snsTopicArn String?
+}
+
+
